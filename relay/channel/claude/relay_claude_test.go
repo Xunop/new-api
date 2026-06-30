@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 
@@ -372,4 +373,32 @@ func TestRequestOpenAI2ClaudeMessage_ClaudeOpus48ThinkingUsesAdaptiveHighEffort(
 	require.Nil(t, claudeRequest.Temperature)
 	require.Nil(t, claudeRequest.TopP)
 	require.Nil(t, claudeRequest.TopK)
+}
+
+func TestRequestOpenAI2ClaudeMessage_RejectsUnsupportedFileMimeType(t *testing.T) {
+	request := dto.GeneralOpenAIRequest{
+		Model: "claude-3-5-sonnet",
+		Messages: []dto.Message{
+			{
+				Role: "user",
+				Content: []any{
+					map[string]any{
+						"type": "text",
+						"text": "Summarize this note",
+					},
+					map[string]any{
+						"type": "file",
+						"file": map[string]any{
+							"filename":  "note.txt",
+							"file_data": "data:text/plain;base64," + base64.StdEncoding.EncodeToString([]byte("hello from attachment")),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := RequestOpenAI2ClaudeMessage(nil, request)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "mime type is not supported by Claude")
 }

@@ -38,6 +38,7 @@ type PlaygroundInputControlsProps = {
   onModelChange: (value: string) => void
   onStop?: () => void
   text: string
+  hasReadyAttachments?: boolean
   tools: ReactNode
 }
 
@@ -53,6 +54,7 @@ export function PlaygroundInputControls({
   onModelChange,
   onStop,
   text,
+  hasReadyAttachments,
   tools,
 }: PlaygroundInputControlsProps) {
   const { t } = useTranslation()
@@ -65,6 +67,7 @@ export function PlaygroundInputControls({
       isModelLoading,
       models,
       text,
+      hasReadyAttachments,
     })
 
   const renderSelector = () => (

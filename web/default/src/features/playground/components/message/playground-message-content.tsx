@@ -49,6 +49,7 @@ import {
 } from '../../lib'
 import { getMessageContentStyles } from '../../lib/message/message-styles'
 import type { Message } from '../../types'
+import { PlaygroundAttachmentChips } from '../attachments/playground-attachment-chips'
 import { MessageError } from './message-error'
 import { MessageMetadata } from './message-metadata'
 
@@ -157,6 +158,12 @@ export function PlaygroundMessageContent({
             >
               <Response final={isMessageFinal}>{displayContent}</Response>
             </MessageContent>
+          )}
+          {message.attachments && message.attachments.length > 0 && (
+            <PlaygroundAttachmentChips
+              attachments={message.attachments}
+              className='mt-2'
+            />
           )}
           <MessageMetadata alignment={alignment} message={message} />
           {actions}

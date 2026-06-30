@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { nanoid } from 'nanoid'
+
 import { MESSAGE_STATUS, STORAGE_KEYS } from '../../constants'
 import type { PlaygroundConfig, ParameterEnabled, Message } from '../../types'
 import {
@@ -100,8 +102,14 @@ function getMessageSize(message: Message): number {
     0
   )
   const reasoningSize = message.reasoning?.content.length ?? 0
+  const attachmentSize =
+    message.attachments?.reduce(
+      (total, attachment) =>
+        total + attachment.filename.length + attachment.mimeType.length,
+      0
+    ) ?? 0
 
-  return versionsSize + reasoningSize
+  return versionsSize + reasoningSize + attachmentSize
 }
 
 function truncateText(text: string, maxLength: number): string {
@@ -192,6 +200,30 @@ function collapseRepeatedSectionSnapshots(text: string): string {
   return text.slice(lastRepeatedRunStart)
 }
 
+function normalizeStoredAttachmentsForLoad(
+  message: Message
+): Message['attachments'] {
+  if (!message.attachments) {
+    return undefined
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  return message.attachments.map((attachment) => {
+    if (
+      attachment.expiresAt !== undefined &&
+      attachment.expiresAt <= now &&
+      attachment.status !== 'expired'
+    ) {
+      return {
+        ...attachment,
+        status: 'expired',
+      }
+    }
+
+    return attachment
+  })
+}
+
 function normalizeStoredMessageForLoad(message: Message): Message {
   let changed = false
   const versions = message.versions.map((version) => {
@@ -223,7 +255,18 @@ function normalizeStoredMessageForLoad(message: Message): Message {
     changed = true
   }
 
-  const normalized = changed ? { ...message, versions, reasoning } : message
+  const attachments = normalizeStoredAttachmentsForLoad(message)
+  if (
+    attachments?.some(
+      (attachment, index) => attachment !== message.attachments?.[index]
+    )
+  ) {
+    changed = true
+  }
+
+  const normalized = changed
+    ? { ...message, versions, reasoning, attachments }
+    : message
 
   if (!isAssistantMessagePending(normalized)) {
     return normalized
@@ -383,6 +426,32 @@ export function saveMessages(messages: Message[]): void {
   }
 }
 
+export function createPlaygroundSessionId(): string {
+  return `pg_${nanoid()}`
+}
+
+export function loadSessionId(): string | null {
+  try {
+    const saved = readStoredValue(STORAGE_KEYS.SESSION_ID)
+    if (!saved) return null
+    const value = unwrapStoredValue(saved)
+    return typeof value === 'string' && value ? value : null
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load playground session:', error)
+  }
+  return null
+}
+
+export function saveSessionId(sessionId: string): void {
+  try {
+    writeStoredValue(STORAGE_KEYS.SESSION_ID, sessionId)
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to save playground session:', error)
+  }
+}
+
 /**
  * Clear all playground data
  */
@@ -391,6 +460,7 @@ export function clearPlaygroundData(): void {
     localStorage.removeItem(STORAGE_KEYS.CONFIG)
     localStorage.removeItem(STORAGE_KEYS.PARAMETER_ENABLED)
     localStorage.removeItem(STORAGE_KEYS.MESSAGES)
+    localStorage.removeItem(STORAGE_KEYS.SESSION_ID)
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to clear playground data:', error)

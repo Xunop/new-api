@@ -9,7 +9,9 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	playgroundattachment "github.com/QuantumNous/new-api/service/playground_attachment"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
 // RegisterScheduledSystemTasks wires the periodic channel test, upstream model
@@ -22,6 +24,7 @@ func RegisterScheduledSystemTasks() {
 	service.RegisterSystemTaskHandler(modelUpdateHandler{})
 	service.RegisterSystemTaskHandler(midjourneyPollHandler{})
 	service.RegisterSystemTaskHandler(asyncTaskPollHandler{})
+	service.RegisterSystemTaskHandler(playgroundAttachmentCleanupHandler{})
 }
 
 // channelTestHandler runs the scheduled "test all channels" job. Enablement and
@@ -150,6 +153,39 @@ func (asyncTaskPollHandler) NewPayload() any { return nil }
 func (asyncTaskPollHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
 	summary := service.RunTaskPollingOnce(ctx, service.NewSystemTaskProgressReporter(task, runnerID))
 	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, summary, nil)
+}
+
+type playgroundAttachmentCleanupHandler struct{}
+
+func (playgroundAttachmentCleanupHandler) Type() string {
+	return model.SystemTaskTypePlaygroundAttachmentCleanup
+}
+
+func (playgroundAttachmentCleanupHandler) Enabled() bool {
+	return true
+}
+
+func (playgroundAttachmentCleanupHandler) Interval() time.Duration {
+	minutes := system_setting.GetPlaygroundAttachmentSettings().CleanupIntervalMinutes
+	if minutes <= 0 {
+		minutes = 30
+	}
+	return time.Duration(minutes) * time.Minute
+}
+
+func (playgroundAttachmentCleanupHandler) NewPayload() any { return nil }
+
+func (playgroundAttachmentCleanupHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
+	batchSize := system_setting.GetPlaygroundAttachmentSettings().CleanupBatchSize
+	if batchSize <= 0 {
+		batchSize = 100
+	}
+	result, err := playgroundattachment.NewDefaultService().CleanupExpired(ctx, batchSize)
+	if err != nil {
+		finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusFailed, result, err)
+		return
+	}
+	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, result, nil)
 }
 
 func finishSystemTaskHandler(task *model.SystemTask, runnerID string, status model.SystemTaskStatus, result any, runErr error) {

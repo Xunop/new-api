@@ -63,6 +63,24 @@ const sourceSchema = z.object({
   title: z.string(),
 })
 
+const attachmentSchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  filename: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  status: z.enum([
+    'uploading',
+    'ready',
+    'failed',
+    'active',
+    'deleted',
+    'expired',
+  ]),
+  expiresAt: z.number().optional(),
+  error: z.string().optional(),
+})
+
 const reasoningSchema = z.object({
   content: z.string(),
   duration: z.number(),
@@ -75,6 +93,7 @@ const messageSchema = z.object({
   key: z.string(),
   from: messageRoleSchema,
   versions: z.array(messageVersionSchema).min(1),
+  attachments: z.array(attachmentSchema).optional(),
   createdAt: z.number().optional(),
   startedAt: z.number().optional(),
   completedAt: z.number().optional(),

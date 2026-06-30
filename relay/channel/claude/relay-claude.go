@@ -396,8 +396,10 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 						}
 						if strings.HasPrefix(mimeType, "application/pdf") {
 							claudeMediaMessage.Type = "document"
-						} else {
+						} else if strings.HasPrefix(mimeType, "image/") {
 							claudeMediaMessage.Type = "image"
+						} else {
+							return nil, fmt.Errorf("mime type is not supported by Claude: '%s'", mimeType)
 						}
 
 						claudeMediaMessage.Source.MediaType = mimeType

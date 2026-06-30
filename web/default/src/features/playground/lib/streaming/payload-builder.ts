@@ -35,7 +35,7 @@ export function buildChatCompletionPayload(
   // Filter and format valid messages
   const processedMessages = messages
     .filter(isValidMessage)
-    .map(formatMessageForAPI)
+    .map((message) => formatMessageForAPI(message, config.model))
 
   const payload: ChatCompletionRequest = {
     model: config.model,

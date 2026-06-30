@@ -37,6 +37,7 @@ const BRAND_AND_LITERAL_KEYS = new Set([
   'API URL',
   'API2GPT',
   'AccessKey / SecretAccessKey',
+  'Alibaba OSS',
   'AZURE_OPENAI_ENDPOINT *',
   'Baidu V2',
   'CC Switch',

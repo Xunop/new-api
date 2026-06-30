@@ -359,6 +359,23 @@ export type OperationsSettings = {
   'perf_metrics_setting.flush_interval': number
   'perf_metrics_setting.bucket_time': 'hour' | 'minute' | '5min'
   'perf_metrics_setting.retention_days': number
+  'playground_attachment.enabled': boolean
+  'playground_attachment.storage_driver': string
+  'playground_attachment.ttl_hours': number
+  'playground_attachment.max_file_size_bytes': number
+  'playground_attachment.max_files_per_message': number
+  'playground_attachment.max_files_per_session': number
+  'playground_attachment.allowed_mime_types': string
+  'playground_attachment.reference_ttl_seconds': number
+  'playground_attachment.local_base_path': string
+  'playground_attachment.cleanup_interval_minutes': number
+  'playground_attachment.cleanup_batch_size': number
+  'playground_attachment.oss_endpoint': string
+  'playground_attachment.oss_bucket': string
+  'playground_attachment.oss_region': string
+  'playground_attachment.oss_api_key': string
+  'playground_attachment.oss_secret': string
+  'playground_attachment.oss_object_prefix': string
 }
 
 export type SecuritySettings = {

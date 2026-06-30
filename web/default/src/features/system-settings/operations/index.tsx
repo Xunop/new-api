@@ -55,6 +55,24 @@ const defaultOperationsSettings: OperationsSettings = {
   'perf_metrics_setting.flush_interval': 5,
   'perf_metrics_setting.bucket_time': 'hour',
   'perf_metrics_setting.retention_days': 0,
+  'playground_attachment.enabled': false,
+  'playground_attachment.storage_driver': 'local',
+  'playground_attachment.ttl_hours': 24,
+  'playground_attachment.max_file_size_bytes': 10 * 1024 * 1024,
+  'playground_attachment.max_files_per_message': 4,
+  'playground_attachment.max_files_per_session': 20,
+  'playground_attachment.allowed_mime_types':
+    '["image/png","image/jpeg","image/gif","image/webp","text/plain","application/pdf"]',
+  'playground_attachment.reference_ttl_seconds': 300,
+  'playground_attachment.local_base_path': './data/playground-attachments',
+  'playground_attachment.cleanup_interval_minutes': 30,
+  'playground_attachment.cleanup_batch_size': 100,
+  'playground_attachment.oss_endpoint': '',
+  'playground_attachment.oss_bucket': '',
+  'playground_attachment.oss_region': '',
+  'playground_attachment.oss_api_key': '',
+  'playground_attachment.oss_secret': '',
+  'playground_attachment.oss_object_prefix': 'playground',
 }
 
 export function OperationsSettings() {

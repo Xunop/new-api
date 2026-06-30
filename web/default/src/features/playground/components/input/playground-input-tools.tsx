@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { GlobeIcon, PaperclipIcon, Trash2Icon } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -48,17 +48,30 @@ type PlaygroundInputToolsProps = {
   disabled?: boolean
   hasMessages?: boolean
   onClearMessages?: () => void
+  onFilesSelected?: (files: FileList | File[]) => void
 }
 
 export function PlaygroundInputTools({
   disabled,
   hasMessages = false,
   onClearMessages,
+  onFilesSelected,
 }: PlaygroundInputToolsProps) {
   const { t } = useTranslation()
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileAction = (action: string) => {
+    if (action === 'upload-file') {
+      fileInputRef.current?.click()
+      return
+    }
+    if (action === 'upload-photo') {
+      imageInputRef.current?.click()
+      return
+    }
+
     const notice = getAttachmentActionNotice(action)
     toast.info(t(notice.title), {
       description: notice.description,
@@ -78,6 +91,31 @@ export function PlaygroundInputTools({
 
   return (
     <>
+      <input
+        ref={fileInputRef}
+        className='hidden'
+        multiple
+        onChange={(event) => {
+          if (event.target.files) {
+            onFilesSelected?.(event.target.files)
+          }
+          event.target.value = ''
+        }}
+        type='file'
+      />
+      <input
+        ref={imageInputRef}
+        accept='image/*'
+        className='hidden'
+        multiple
+        onChange={(event) => {
+          if (event.target.files) {
+            onFilesSelected?.(event.target.files)
+          }
+          event.target.value = ''
+        }}
+        type='file'
+      />
       <PromptInputTools className='bg-background/70 border-border/60 rounded-lg border p-1 shadow-xs'>
         <Tooltip>
           <DropdownMenu>

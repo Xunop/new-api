@@ -24,7 +24,59 @@ import type {
   ChatCompletionResponse,
   ModelOption,
   GroupOption,
+  PlaygroundAttachment,
 } from './types'
+
+type APIEnvelope<T> = {
+  success: boolean
+  message?: string
+  code?: string
+  data: T
+}
+
+type RawPlaygroundAttachment = {
+  id: string
+  session_id?: string
+  filename: string
+  mime_type: string
+  size: number
+  status: PlaygroundAttachment['status']
+  expires_at?: number
+}
+
+type RawPlaygroundAttachmentReference = RawPlaygroundAttachment & {
+  url: string
+}
+
+function mapAttachment(raw: RawPlaygroundAttachment): PlaygroundAttachment {
+  return {
+    id: raw.id,
+    sessionId: raw.session_id ?? '',
+    filename: raw.filename,
+    mimeType: raw.mime_type,
+    size: raw.size,
+    status: raw.status === 'active' ? 'ready' : raw.status,
+    expiresAt: raw.expires_at,
+  }
+}
+
+function mapAttachmentReference(
+  raw: RawPlaygroundAttachmentReference
+): PlaygroundAttachment {
+  return {
+    ...mapAttachment(raw),
+    referenceUrl: raw.url,
+  }
+}
+
+function assertAPIEnvelope<T>(payload: APIEnvelope<T>): T {
+  if (!payload.success) {
+    const error = new Error(payload.message || payload.code || 'Request failed')
+    error.name = payload.code || 'playground_attachment_error'
+    throw error
+  }
+  return payload.data
+}
 
 /**
  * Send chat completion request (non-streaming)
@@ -36,7 +88,7 @@ export async function sendChatCompletion(
   const res = await api.post(API_ENDPOINTS.CHAT_COMPLETIONS, payload, {
     signal,
     skipErrorHandler: true,
-  } as Record<string, unknown>)
+  })
   return res.data
 }
 
@@ -79,4 +131,69 @@ export async function getUserGroups(): Promise<GroupOption[]> {
     ratio: info.ratio,
     desc: info.desc,
   }))
+}
+
+export async function uploadPlaygroundAttachment(
+  sessionId: string,
+  file: File
+): Promise<PlaygroundAttachment> {
+  const formData = new FormData()
+  formData.append('session_id', sessionId)
+  formData.append('file', file)
+
+  const res = await api.post<APIEnvelope<RawPlaygroundAttachment>>(
+    API_ENDPOINTS.ATTACHMENTS,
+    formData,
+    {
+      skipErrorHandler: true,
+    }
+  )
+  return mapAttachment(assertAPIEnvelope(res.data))
+}
+
+export async function listPlaygroundAttachments(
+  sessionId: string
+): Promise<PlaygroundAttachment[]> {
+  const res = await api.get<APIEnvelope<RawPlaygroundAttachment[]>>(
+    API_ENDPOINTS.ATTACHMENTS,
+    {
+      params: { session_id: sessionId },
+      skipErrorHandler: true,
+    }
+  )
+  return assertAPIEnvelope(res.data).map(mapAttachment)
+}
+
+export async function deletePlaygroundAttachment(id: string): Promise<void> {
+  const res = await api.delete<APIEnvelope<null>>(
+    `${API_ENDPOINTS.ATTACHMENTS}/${id}`,
+    {
+      skipErrorHandler: true,
+    }
+  )
+  assertAPIEnvelope(res.data)
+}
+
+export async function generatePlaygroundAttachmentReferences(
+  attachmentIds: string[]
+): Promise<PlaygroundAttachment[]> {
+  const res = await api.post<APIEnvelope<RawPlaygroundAttachmentReference[]>>(
+    API_ENDPOINTS.ATTACHMENT_REFERENCES,
+    { attachment_ids: attachmentIds },
+    {
+      skipErrorHandler: true,
+    }
+  )
+  return assertAPIEnvelope(res.data).map(mapAttachmentReference)
+}
+
+export async function deletePlaygroundSessionAttachments(
+  sessionId: string
+): Promise<void> {
+  const attachments = await listPlaygroundAttachments(sessionId)
+  await Promise.allSettled(
+    attachments
+      .filter((attachment) => attachment.status === 'ready')
+      .map((attachment) => deletePlaygroundAttachment(attachment.id))
+  )
 }

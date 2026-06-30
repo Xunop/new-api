@@ -23,6 +23,9 @@ import {
   saveConfig,
   saveParameterEnabled,
   saveMessages,
+  loadSessionId,
+  saveSessionId,
+  createPlaygroundSessionId,
   applyMessageStateUpdate,
   getInitialParameterEnabled,
   getInitialPlaygroundConfig,
@@ -53,6 +56,13 @@ export function usePlaygroundState() {
   )
 
   const [messages, setMessages] = useState<Message[]>([])
+  const [sessionId, setSessionId] = useState(() => {
+    const stored = loadSessionId()
+    if (stored) return stored
+    const nextSessionId = createPlaygroundSessionId()
+    saveSessionId(nextSessionId)
+    return nextSessionId
+  })
   const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const messagesSaveTimerRef = useRef<number | null>(null)
   const latestMessagesRef = useRef<Message[]>(messages)
@@ -149,6 +159,13 @@ export function usePlaygroundState() {
     updateMessages([])
   }, [updateMessages])
 
+  const resetSession = useCallback(() => {
+    const nextSessionId = createPlaygroundSessionId()
+    saveSessionId(nextSessionId)
+    setSessionId(nextSessionId)
+    return nextSessionId
+  }, [])
+
   // Reset config to defaults
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_CONFIG)
@@ -162,6 +179,7 @@ export function usePlaygroundState() {
     config,
     parameterEnabled,
     messages,
+    sessionId,
     isLoadingMessages,
     models,
     groups,
@@ -175,6 +193,7 @@ export function usePlaygroundState() {
     updateParameterEnabled,
     updateMessages,
     clearMessages,
+    resetSession,
     resetConfig,
   }
 }

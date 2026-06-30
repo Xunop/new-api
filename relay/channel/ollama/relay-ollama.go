@@ -108,6 +108,25 @@ func openAIChatToOllamaChat(c *gin.Context, r *dto.GeneralOpenAIRequest) (*Ollam
 							images = append(images, base64Data)
 						}
 					}
+				} else if part.Type == dto.ContentTypeFile {
+					source := part.ToFileSource()
+					if source == nil {
+						continue
+					}
+					mimeType, err := service.GetMimeType(c, source)
+					if err != nil {
+						return nil, err
+					}
+					if !strings.HasPrefix(mimeType, "image/") {
+						return nil, fmt.Errorf("unsupported non-image attachment for Ollama: %s", mimeType)
+					}
+					base64Data, _, err := service.GetBase64Data(c, source, "fetch image for ollama chat")
+					if err != nil {
+						return nil, err
+					}
+					if base64Data != "" {
+						images = append(images, base64Data)
+					}
 				} else if part.Type == dto.ContentTypeText {
 					textBuilder.WriteString(part.Text)
 				}

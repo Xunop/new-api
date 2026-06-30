@@ -24,7 +24,14 @@ import type {
   MessageVersion,
   ChatCompletionMessage,
   ContentPart,
+  PlaygroundAttachment,
 } from '../../types'
+import {
+  buildAttachmentContentParts,
+} from '../attachments/playground-attachment-utils'
+import {
+  getAttachmentCompatibility,
+} from '../attachments/attachment-compatibility-utils'
 
 /**
  * Create a new message version
@@ -76,12 +83,14 @@ export function updateCurrentVersionContent(
  */
 export function createUserMessage(
   content: string,
+  attachments: PlaygroundAttachment[] = [],
   createdAt: number = Date.now()
 ): Message {
   return {
     key: nanoid(),
     from: MESSAGE_ROLES.USER,
     versions: [createMessageVersion(content)],
+    attachments: attachments.length > 0 ? attachments : undefined,
     createdAt,
   }
 }
@@ -111,11 +120,27 @@ export function createLoadingAssistantMessage(
  */
 export function buildMessageContent(
   text: string,
-  imageUrls: string[] = []
+  attachments: PlaygroundAttachment[] = [],
+  currentModel?: string
 ): string | ContentPart[] {
-  const validImages = imageUrls.filter((url) => url.trim() !== '')
+  if (currentModel) {
+    const incompatibleAttachment = attachments.find(
+      (attachment) =>
+        isAttachmentReadyForModelValidation(attachment) &&
+        !getAttachmentCompatibility(attachment, currentModel).available
+    )
 
-  if (validImages.length === 0) {
+    if (incompatibleAttachment) {
+      throw new Error(
+        getAttachmentCompatibility(incompatibleAttachment, currentModel).reason ??
+          'Selected model may not support this attachment type'
+      )
+    }
+  }
+
+  const attachmentParts = buildAttachmentContentParts(attachments, currentModel)
+
+  if (attachmentParts.length === 0) {
     return text
   }
 
@@ -124,13 +149,16 @@ export function buildMessageContent(
       type: 'text',
       text: text || '',
     },
-    ...validImages.map((url) => ({
-      type: 'image_url' as const,
-      image_url: { url: url.trim() },
-    })),
+    ...attachmentParts,
   ]
 
   return parts
+}
+
+function isAttachmentReadyForModelValidation(
+  attachment: PlaygroundAttachment
+): boolean {
+  return attachment.status === 'ready' || attachment.status === 'active'
 }
 
 /**
@@ -152,11 +180,18 @@ export function getTextContent(content: string | ContentPart[]): string {
 /**
  * Format message for API request
  */
-export function formatMessageForAPI(message: Message): ChatCompletionMessage {
+export function formatMessageForAPI(
+  message: Message,
+  currentModel?: string
+): ChatCompletionMessage {
   const currentVersion = getCurrentVersion(message)
   return {
     role: message.from,
-    content: currentVersion.content,
+    content: buildMessageContent(
+      currentVersion.content,
+      message.attachments,
+      currentModel
+    ),
   }
 }
 

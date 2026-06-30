@@ -32,6 +32,7 @@ export interface Message {
   key: string
   from: MessageRole
   versions: MessageVersion[]
+  attachments?: PlaygroundAttachment[]
   createdAt?: number
   startedAt?: number
   completedAt?: number
@@ -58,10 +59,14 @@ export interface ChatCompletionMessage {
 }
 
 export interface ContentPart {
-  type: 'text' | 'image_url'
+  type: 'text' | 'image_url' | 'file'
   text?: string
   image_url?: {
     url: string
+  }
+  file?: {
+    filename: string
+    file_data: string
   }
 }
 
@@ -113,6 +118,26 @@ export interface ChatCompletionResponse {
     completion_tokens: number
     total_tokens: number
   }
+}
+
+export type PlaygroundAttachmentStatus =
+  | 'uploading'
+  | 'ready'
+  | 'failed'
+  | 'active'
+  | 'deleted'
+  | 'expired'
+
+export interface PlaygroundAttachment {
+  id: string
+  sessionId: string
+  filename: string
+  mimeType: string
+  size: number
+  status: PlaygroundAttachmentStatus
+  expiresAt?: number
+  referenceUrl?: string
+  error?: string
 }
 
 // Configuration types

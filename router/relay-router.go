@@ -59,12 +59,27 @@ func SetRelayRouter(router *gin.Engine) {
 		})
 	}
 
+	playgroundPublicRouter := router.Group("/pg")
+	playgroundPublicRouter.Use(middleware.RouteTag("relay"))
+	playgroundPublicRouter.Use(middleware.SystemPerformanceCheck())
+	{
+		playgroundPublicRouter.GET("/attachments/:id/content", controller.ReadPlaygroundAttachmentContent)
+	}
 	playgroundRouter := router.Group("/pg")
 	playgroundRouter.Use(middleware.RouteTag("relay"))
 	playgroundRouter.Use(middleware.SystemPerformanceCheck())
-	playgroundRouter.Use(middleware.UserAuth(), middleware.Distribute())
+	playgroundRouter.Use(middleware.UserAuth())
 	{
-		playgroundRouter.POST("/chat/completions", controller.Playground)
+		playgroundRouter.POST("/attachments", controller.UploadPlaygroundAttachment)
+		playgroundRouter.GET("/attachments", controller.ListPlaygroundAttachments)
+		playgroundRouter.GET("/attachments/:id", controller.GetPlaygroundAttachment)
+		playgroundRouter.DELETE("/attachments/:id", controller.DeletePlaygroundAttachment)
+		playgroundRouter.POST("/attachments/:id/reference", controller.GeneratePlaygroundAttachmentReference)
+		playgroundRouter.POST("/attachments/references", controller.GeneratePlaygroundAttachmentReferences)
+
+		playgroundRelayRouter := playgroundRouter.Group("")
+		playgroundRelayRouter.Use(middleware.Distribute())
+		playgroundRelayRouter.POST("/chat/completions", controller.Playground)
 	}
 	relayV1Router := router.Group("/v1")
 	relayV1Router.Use(middleware.RouteTag("relay"))

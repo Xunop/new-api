@@ -23,6 +23,7 @@ import { WorkerSettingsSection } from '../integrations/worker-settings-section'
 import { LogSettingsSection } from '../maintenance/log-settings-section'
 import { PerformanceSection } from '../maintenance/performance-section'
 import { UpdateCheckerSection } from '../maintenance/update-checker-section'
+import { PlaygroundAttachmentsSection } from './playground-attachments-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 
@@ -88,6 +89,53 @@ const OPERATIONS_SECTIONS = [
           WorkerValidKey: settings.WorkerValidKey,
           WorkerAllowHttpImageRequestEnabled:
             settings.WorkerAllowHttpImageRequestEnabled,
+        }}
+      />
+    ),
+  },
+  {
+    id: 'playground-attachments',
+    titleKey: 'Playground Attachments',
+    build: (settings: OperationsSettings) => (
+      <PlaygroundAttachmentsSection
+        defaultValues={{
+          'playground_attachment.enabled':
+            settings['playground_attachment.enabled'] ?? false,
+          'playground_attachment.storage_driver':
+            settings['playground_attachment.storage_driver'] ?? 'local',
+          'playground_attachment.ttl_hours':
+            settings['playground_attachment.ttl_hours'] ?? 24,
+          'playground_attachment.max_file_size_bytes':
+            settings['playground_attachment.max_file_size_bytes'] ??
+            10 * 1024 * 1024,
+          'playground_attachment.max_files_per_message':
+            settings['playground_attachment.max_files_per_message'] ?? 4,
+          'playground_attachment.max_files_per_session':
+            settings['playground_attachment.max_files_per_session'] ?? 20,
+          'playground_attachment.allowed_mime_types':
+            settings['playground_attachment.allowed_mime_types'] ??
+            '["image/png","image/jpeg","image/gif","image/webp","text/plain","application/pdf"]',
+          'playground_attachment.reference_ttl_seconds':
+            settings['playground_attachment.reference_ttl_seconds'] ?? 300,
+          'playground_attachment.local_base_path':
+            settings['playground_attachment.local_base_path'] ??
+            './data/playground-attachments',
+          'playground_attachment.cleanup_interval_minutes':
+            settings['playground_attachment.cleanup_interval_minutes'] ?? 30,
+          'playground_attachment.cleanup_batch_size':
+            settings['playground_attachment.cleanup_batch_size'] ?? 100,
+          'playground_attachment.oss_endpoint':
+            settings['playground_attachment.oss_endpoint'] ?? '',
+          'playground_attachment.oss_bucket':
+            settings['playground_attachment.oss_bucket'] ?? '',
+          'playground_attachment.oss_region':
+            settings['playground_attachment.oss_region'] ?? '',
+          'playground_attachment.oss_api_key':
+            settings['playground_attachment.oss_api_key'] ?? '',
+          'playground_attachment.oss_secret':
+            settings['playground_attachment.oss_secret'] ?? '',
+          'playground_attachment.oss_object_prefix':
+            settings['playground_attachment.oss_object_prefix'] ?? 'playground',
         }}
       />
     ),

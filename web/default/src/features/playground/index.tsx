@@ -16,20 +16,28 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+
+import { deletePlaygroundSessionAttachments } from './api'
 import { PlaygroundChat } from './components/chat/playground-chat'
 import { PlaygroundInput } from './components/input/playground-input'
 import {
   useChatHandler,
+  usePlaygroundAttachments,
   usePlaygroundConversation,
   usePlaygroundOptions,
   usePlaygroundState,
 } from './hooks'
+import { getAttachmentErrorLabel } from './lib'
 
 export function Playground() {
   const {
     config,
     parameterEnabled,
     messages,
+    sessionId,
     isLoadingMessages,
     models,
     groups,
@@ -38,7 +46,10 @@ export function Playground() {
     setGroups,
     updateConfig,
     clearMessages,
+    resetSession,
   } = usePlaygroundState()
+  const { t } = useTranslation()
+  const [isPreparingAttachments, setIsPreparingAttachments] = useState(false)
 
   const { sendChat, stopGeneration, isGenerating } = useChatHandler({
     config,
@@ -60,8 +71,40 @@ export function Playground() {
     sendChat,
   })
 
+  const {
+    attachments,
+    hasPendingUploads,
+    hasReadyAttachments,
+    uploadFiles,
+    removeAttachment,
+    clearAttachments,
+    clearSubmittedAttachments,
+    resolveReadyReferences,
+  } = usePlaygroundAttachments(sessionId, config.model)
+
+  const handleSendMessageWithAttachments = async (text: string) => {
+    try {
+      setIsPreparingAttachments(true)
+      const referencedAttachments = await resolveReadyReferences()
+      handleSendMessage(text, referencedAttachments)
+      clearSubmittedAttachments(
+        referencedAttachments.map((attachment) => attachment.id)
+      )
+    } catch (error: unknown) {
+      const description = t(
+        getAttachmentErrorLabel(error, 'Attachment reference failed')
+      )
+      toast.error(t('Attachment reference failed'), { description })
+    } finally {
+      setIsPreparingAttachments(false)
+    }
+  }
+
   const handleClearMessages = () => {
     handleEditOpenChange(false)
+    void deletePlaygroundSessionAttachments(sessionId).catch(() => undefined)
+    clearAttachments()
+    resetSession()
     clearMessages()
   }
 
@@ -95,7 +138,9 @@ export function Playground() {
       {/* Input area: center content and constrain to the same container width */}
       <div className='mx-auto w-full max-w-4xl'>
         <PlaygroundInput
-          disabled={isGenerating}
+          attachments={attachments}
+          disabled={isGenerating || isPreparingAttachments || hasPendingUploads}
+          currentModel={config.model}
           groups={groups}
           groupValue={config.group}
           isGenerating={isGenerating}
@@ -104,9 +149,12 @@ export function Playground() {
           models={models}
           onGroupChange={(value) => updateConfig('group', value)}
           onClearMessages={handleClearMessages}
+          onFilesSelected={uploadFiles}
           onModelChange={(value) => updateConfig('model', value)}
+          onRemoveAttachment={removeAttachment}
           onStop={stopGeneration}
-          onSubmit={handleSendMessage}
+          onSubmit={handleSendMessageWithAttachments}
+          hasReadyAttachments={hasReadyAttachments}
           hasMessages={messages.length > 0}
         />
       </div>

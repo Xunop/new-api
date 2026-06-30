@@ -27,7 +27,8 @@ import {
 } from '@/components/ai-elements/prompt-input'
 
 import { getSubmittableInputText } from '../../lib'
-import type { ModelOption, GroupOption } from '../../types'
+import type { ModelOption, GroupOption, PlaygroundAttachment } from '../../types'
+import { PlaygroundAttachmentChips } from '../attachments/playground-attachment-chips'
 import { PlaygroundInputControls } from './playground-input-controls'
 import { PlaygroundInputTools } from './playground-input-tools'
 
@@ -45,6 +46,11 @@ interface PlaygroundInputProps {
   onGroupChange: (value: string) => void
   hasMessages?: boolean
   onClearMessages?: () => void
+  attachments?: PlaygroundAttachment[]
+  hasReadyAttachments?: boolean
+  currentModel?: string
+  onFilesSelected?: (files: FileList | File[]) => void
+  onRemoveAttachment?: (attachment: PlaygroundAttachment) => void
 }
 
 export function PlaygroundInput({
@@ -61,14 +67,23 @@ export function PlaygroundInput({
   onGroupChange,
   hasMessages = false,
   onClearMessages,
+  attachments = [],
+  hasReadyAttachments = false,
+  currentModel,
+  onFilesSelected,
+  onRemoveAttachment,
 }: PlaygroundInputProps) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
 
   const handleSubmit = (message: PromptInputMessage) => {
-    const submittableText = getSubmittableInputText(message, disabled)
+    const submittableText = getSubmittableInputText(
+      message,
+      disabled,
+      hasReadyAttachments
+    )
 
-    if (!submittableText) return
+    if (submittableText === null) return
     onSubmit(submittableText)
     setText('')
   }
@@ -92,6 +107,13 @@ export function PlaygroundInput({
           value={text}
         />
 
+        <PlaygroundAttachmentChips
+          attachments={attachments}
+          className='px-3 pb-3'
+          currentModel={currentModel}
+          onRemove={onRemoveAttachment}
+        />
+
         <PromptInputFooter className='border-border/60 bg-muted/20 dark:bg-muted/10 border-t px-3 py-2.5 backdrop-blur'>
           <PlaygroundInputControls
             disabled={disabled}
@@ -105,11 +127,13 @@ export function PlaygroundInput({
             onModelChange={onModelChange}
             onStop={onStop}
             text={text}
+            hasReadyAttachments={hasReadyAttachments}
             tools={
               <PlaygroundInputTools
                 disabled={disabled}
                 hasMessages={hasMessages}
                 onClearMessages={onClearMessages}
+                onFilesSelected={onFilesSelected}
               />
             }
           />
